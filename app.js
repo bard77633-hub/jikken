@@ -39,15 +39,15 @@ function setStatus(newStatus) {
   els.btnLaunch.disabled = isFlying;
   
   if (isFlying) {
-    els.btnLaunch.textContent = 'Flying...';
-    els.btnLaunch.classList.add('bg-gray-400');
-    els.btnLaunch.classList.remove('bg-gradient-to-r', 'from-blue-500', 'to-indigo-600', 'hover:from-blue-600', 'hover:to-indigo-700', 'shadow-blue-500/30');
+    els.btnLaunch.innerHTML = 'Flying... 🏌️‍♂️';
+    els.btnLaunch.classList.add('bg-slate-400', 'cursor-not-allowed');
+    els.btnLaunch.classList.remove('bg-gradient-to-r', 'from-emerald-500', 'to-teal-600', 'hover:from-emerald-600', 'hover:to-teal-700', 'shadow-emerald-500/30');
     
     els.msgFinished.classList.add('hidden');
   } else {
-    els.btnLaunch.textContent = 'LAUNCH! 🚀';
-    els.btnLaunch.classList.remove('bg-gray-400');
-    els.btnLaunch.classList.add('bg-gradient-to-r', 'from-blue-500', 'to-indigo-600', 'hover:from-blue-600', 'hover:to-indigo-700', 'shadow-blue-500/30');
+    els.btnLaunch.innerHTML = 'SHOT! 🏌️‍♂️';
+    els.btnLaunch.classList.remove('bg-slate-400', 'cursor-not-allowed');
+    els.btnLaunch.classList.add('bg-gradient-to-r', 'from-emerald-500', 'to-teal-600', 'hover:from-emerald-600', 'hover:to-teal-700', 'shadow-emerald-500/30');
     
     if (newStatus === 'FINISHED') {
       els.msgFinished.classList.remove('hidden');
@@ -61,12 +61,16 @@ function handleLaunch() {
   const vx = vTotal * Math.cos(LAUNCH_ANGLE);
   const vy = vTotal * Math.sin(LAUNCH_ANGLE);
 
+  // Ball starts slightly in front and up from 0,0 (tee position)
+  const startX = 0.5;
+  const startY = 0.15;
+
   state.physics = {
-    position: { x: 0, y: 0.5 },
+    position: { x: startX, y: startY },
     velocity: { x: vx, y: vy },
     bounces: 0,
     isStopped: false,
-    history: [{ x: 0, y: 0.5 }],
+    history: [{ x: startX, y: startY }],
   };
   
   setStatus('FLYING');
@@ -110,7 +114,7 @@ function updateUI() {
   
   els.valHighScore.textContent = state.highScore.toFixed(1);
 
-  // Sync sliders if they exist (in case params changed programmatically)
+  // Sync sliders
   els.inpPower.value = state.params.power;
   els.inpBounce.value = state.params.bounceLimit;
   els.inpWind.value = state.params.wind;
@@ -122,24 +126,34 @@ function renderGame() {
   // HUD and Stats
   const distStr = position.x.toFixed(1);
   if (els.valDistance) els.valDistance.textContent = distStr;
-  if (els.valDistanceBig) els.valDistanceBig.textContent = distStr;
+  
+  // Big Distance Display removed in index.html, using HUD only or update if exists
+  // if (els.valDistanceBig) els.valDistanceBig.textContent = distStr;
   
   if (els.valHeight) els.valHeight.textContent = position.y.toFixed(1);
 
   // Camera Logic
   const viewWidth = 80;
   const viewHeight = 40;
-  const cameraX = Math.max(0, position.x - viewWidth * 0.2);
+  // Camera follows ball but keeps golfer in view initially
+  const cameraX = Math.max(0, position.x - viewWidth * 0.3);
   
-  // Update SVG ViewBox to simulate camera movement
+  // Update SVG ViewBox (Y is flipped in SVG logic within code? No, we transform points manually usually)
+  // But here we rely on the group transform or coordinate mapping.
+  // The SVG viewBox is set to `0 -35 80 40`. 
+  // Let's slide the x viewbox.
   if (els.svg) {
-    els.svg.setAttribute('viewBox', `${cameraX} ${-viewHeight + 5} ${viewWidth} ${viewHeight}`);
+    // y is usually negative for "up" in SVG from 0.
+    // Fixed height view: from -35 to +5 (ground at 0).
+    els.svg.setAttribute('viewBox', `${cameraX} -35 ${viewWidth} ${viewHeight}`);
   }
 
   // Update Ball
+  // Note: physics y is positive up. SVG y is positive down.
+  // So we negate y.
   if (els.ball) {
     els.ball.setAttribute('cx', position.x);
-    els.ball.setAttribute('cy', -position.y);
+    els.ball.setAttribute('cy', -position.y); // Flip Y
   }
 
   // Update Trail
@@ -159,16 +173,20 @@ function renderMarkers(cameraX, viewWidth) {
   const end = start + viewWidth + 10;
   
   let markersHtml = '';
-  // Ground Line
-  markersHtml += `<line x1="${cameraX - 10}" y1="0" x2="${cameraX + viewWidth + 10}" y2="0" stroke="#22c55e" stroke-width="0.5" />`;
+  // Ground Line (Green fairway)
   markersHtml += `<rect x="${cameraX - 10}" y="0" width="${viewWidth + 20}" height="10" fill="#4ade80" />`;
+  markersHtml += `<line x1="${cameraX - 10}" y1="0" x2="${cameraX + viewWidth + 10}" y2="0" stroke="#22c55e" stroke-width="0.2" />`;
 
-  // Ticks and Text
+  // Distance Markers (Yardage signs)
   for (let i = start; i <= end; i += 10) {
+    if (i === 0) continue; // Don't mark 0
     markersHtml += `
-      <g>
-        <line x1="${i}" y1="0" x2="${i}" y2="0.5" stroke="white" stroke-width="0.1" />
-        <text x="${i}" y="2" font-size="1.5" fill="white" text-anchor="middle" style="opacity: 0.8">${i}m</text>
+      <g transform="translate(${i}, 0)">
+        <!-- Pole -->
+        <line x1="0" y1="0" x2="0" y2="-2" stroke="#fff" stroke-width="0.1" />
+        <!-- Board -->
+        <rect x="-1" y="-3" width="2" height="1" fill="#fff" rx="0.2" />
+        <text x="0" y="-2.3" font-size="0.6" fill="#15803d" text-anchor="middle" font-weight="bold">${i}m</text>
       </g>
     `;
   }
@@ -178,14 +196,11 @@ function renderMarkers(cameraX, viewWidth) {
 
 // --- Initialization ---
 
-// Exported function to be called by quiz.js
 export function startGame(initialParams) {
-  // Apply initial parameters if provided
   if (initialParams) {
     state.params = { ...state.params, ...initialParams };
   }
 
-  // Select DOM elements
   els = {
     svg: document.getElementById('game-svg'),
     ball: document.getElementById('elm-ball'),
@@ -204,7 +219,6 @@ export function startGame(initialParams) {
     btnLaunch: document.getElementById('btn-launch'),
     
     valDistance: document.getElementById('val-distance'),     
-    valDistanceBig: document.getElementById('val-distance-big'), 
     valHeight: document.getElementById('val-height'),
     valHighScore: document.getElementById('val-highscore'),
     
@@ -242,5 +256,5 @@ export function startGame(initialParams) {
 
   updateUI();
   renderGame();
-  console.log("Game Started with params:", state.params);
+  console.log("Golf Game Started with params:", state.params);
 }

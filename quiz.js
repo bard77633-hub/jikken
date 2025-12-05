@@ -12,7 +12,7 @@ const questions = [
       "間ノ岳"
     ],
     answer: 1, // 富士山
-    stat: "power" // Height relates to Power
+    stat: "power" 
   },
   {
     category: "科学",
@@ -24,7 +24,7 @@ const questions = [
       "鉄"
     ],
     answer: 2, // 酸素
-    stat: "wind" // Air/Oxygen relates to Wind
+    stat: "wind" 
   },
   {
     category: "歴史",
@@ -36,7 +36,7 @@ const questions = [
       "明治政府"
     ],
     answer: 2, // 江戸幕府
-    stat: "bounce" // Stability relates to Bounce
+    stat: "bounce" 
   },
   {
     category: "音楽",
@@ -48,7 +48,7 @@ const questions = [
       "96鍵"
     ],
     answer: 2, // 88鍵
-    stat: "bounce" // Rhythm relates to Bounce
+    stat: "bounce" 
   },
   {
     category: "宇宙",
@@ -60,7 +60,7 @@ const questions = [
       "木星"
     ],
     answer: 3, // 木星
-    stat: "power" // Massive gravity relates to Power
+    stat: "power" 
   },
   {
     category: "文学",
@@ -72,7 +72,7 @@ const questions = [
       "三島由紀夫"
     ],
     answer: 0, // 夏目漱石
-    stat: "wind" // Whimsy relates to Wind
+    stat: "wind" 
   }
 ];
 
@@ -88,7 +88,6 @@ let bonuses = {
 let els = {};
 
 function init() {
-  // Grab elements safely
   els = {
     quizContainer: document.getElementById('quiz-container'),
     gameContainer: document.getElementById('game-container'),
@@ -107,34 +106,30 @@ function init() {
     bonusWind: document.getElementById('bonus-wind'),
   };
 
-  // Check if critical elements exist
   if (!els.questionText) {
     console.error("Quiz elements not found. Retrying...");
     return;
   }
 
-  // Attach Listeners
   if (els.btnNext) els.btnNext.addEventListener('click', nextQuestion);
   if (els.btnStartGame) els.btnStartGame.addEventListener('click', transitionToGame);
 
-  // Start Quiz
   renderQuestion();
 }
 
 function renderQuestion() {
   const q = questions[currentQuestionIndex];
   
-  // Set Text
-  els.questionText.innerHTML = `<span class="block text-sm text-blue-500 font-bold mb-2 uppercase tracking-wide">${q.category}</span>${q.question}`;
+  // Japanese UI adjustments
+  els.questionText.innerHTML = `<span class="block text-sm text-emerald-500 font-bold mb-2 uppercase tracking-wide">${q.category}</span>${q.question}`;
   els.optionsGrid.innerHTML = '';
   
-  // Update Progress
   const pct = (currentQuestionIndex / questions.length) * 100;
   els.progress.style.width = `${pct}%`;
 
   q.options.forEach((opt, idx) => {
     const btn = document.createElement('button');
-    btn.className = `quiz-option w-full p-4 text-left border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-blue-400 bg-white transition-all`;
+    btn.className = `quiz-option w-full p-4 text-left border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-emerald-400 bg-white transition-all`;
     btn.textContent = opt;
     btn.onclick = () => handleAnswer(idx);
     els.optionsGrid.appendChild(btn);
@@ -146,26 +141,24 @@ function handleAnswer(selectedIndex) {
   const isCorrect = selectedIndex === q.answer;
   const options = els.optionsGrid.children;
 
-  // Disable all buttons
   for (let btn of options) {
     btn.disabled = true;
     btn.classList.add('cursor-not-allowed', 'opacity-60');
   }
 
-  // Highlight result
   if (isCorrect) {
     options[selectedIndex].classList.add('correct');
     options[selectedIndex].classList.remove('opacity-60');
-    els.feedbackText.textContent = "正解！ステータスボーナス獲得！";
-    els.feedbackText.className = "text-lg font-bold mb-4 text-green-600";
+    els.feedbackText.textContent = "正解！ナイスアプローチ！";
+    els.feedbackText.className = "text-lg font-bold mb-4 text-emerald-600";
     score++;
     applyBonus(q.stat);
   } else {
     options[selectedIndex].classList.add('wrong');
-    options[q.answer].classList.add('correct'); // Show right answer
+    options[q.answer].classList.add('correct');
     options[q.answer].classList.remove('opacity-60');
-    els.feedbackText.textContent = "不正解...";
-    els.feedbackText.className = "text-lg font-bold mb-4 text-red-500";
+    els.feedbackText.textContent = "残念...OBです。";
+    els.feedbackText.className = "text-lg font-bold mb-4 text-rose-500";
   }
 
   els.feedbackArea.classList.remove('hidden');
@@ -173,7 +166,6 @@ function handleAnswer(selectedIndex) {
 }
 
 function applyBonus(statType) {
-  // Bonus calculation logic
   if (statType === 'power') bonuses.power += 4;
   if (statType === 'bounce') bonuses.bounce += 1;
   if (statType === 'wind') bonuses.wind += 4;
@@ -195,27 +187,22 @@ function showResults() {
   els.resultArea.classList.remove('hidden');
   els.resultArea.classList.add('fade-in');
   
-  // Final Progress
   els.progress.style.width = '100%';
 
-  // Text
+  // Update Japanese result display
   els.scoreDisplay.textContent = `${score} / ${questions.length}`;
   
-  // Show Calculated Bonuses
   els.bonusPower.textContent = `Lv. ${bonuses.power}`;
   els.bonusBounce.textContent = `Lv. ${bonuses.bounce}`;
   els.bonusWind.textContent = `Lv. ${bonuses.wind}`;
 }
 
 function transitionToGame() {
-  // Hide Quiz
   els.quizContainer.style.display = 'none';
   
-  // Show Game
   els.gameContainer.classList.remove('hidden');
   els.gameContainer.classList.add('fade-in');
 
-  // Start Game Logic with calculated bonuses
   startGame({
     power: bonuses.power,
     bounceLimit: bonuses.bounce,
@@ -223,7 +210,6 @@ function transitionToGame() {
   });
 }
 
-// Initialization Logic to fix "Loading..."
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
