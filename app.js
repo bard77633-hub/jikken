@@ -1,12 +1,11 @@
 import { updatePhysics } from './physics.js';
-import { LAUNCH_ANGLE } from './constants.js';
 
 // --- State ---
 const state = {
   status: 'IDLE', // IDLE, FLYING, FINISHED
   params: {
     power: 15,
-    run: 10, // Replaces bounceLimit. Represents friction reduction.
+    loft: 30, // Launch Angle in degrees (approx 15 to 75 range)
     wind: 5,
   },
   physics: {
@@ -72,8 +71,14 @@ function setStatus(newStatus) {
 
 function handleLaunch() {
   const vTotal = state.params.power * 1.5;
-  const vx = vTotal * Math.cos(LAUNCH_ANGLE);
-  const vy = vTotal * Math.sin(LAUNCH_ANGLE);
+  
+  // Calculate Launch Angle from Loft param
+  // Loft 0 -> 15 deg, Loft 90 -> 75 deg
+  const deg = 15 + (state.params.loft * 0.6); 
+  const rad = deg * (Math.PI / 180);
+
+  const vx = vTotal * Math.cos(rad);
+  const vy = vTotal * Math.sin(rad);
 
   const startX = 0.5;
   const startY = 0.15;
@@ -149,15 +154,19 @@ function updateUI() {
   if (!els.lblPower) return;
   
   els.lblPower.textContent = state.params.power;
-  els.lblRun.textContent = state.params.run;
+  
+  // Calculate actual degree for display
+  const displayDeg = Math.round(15 + (state.params.loft * 0.6));
+  els.lblLoft.textContent = `${displayDeg}°`;
+  
   els.lblWind.textContent = state.params.wind;
   
   const maxPower = 40; 
-  const maxRun = 50; // Increased scale for Run
+  const maxLoft = 100; // UI scale 0-100
   const maxWind = 20;
 
   if (els.barPower) els.barPower.style.width = `${Math.min(100, (state.params.power / maxPower) * 100)}%`;
-  if (els.barRun) els.barRun.style.width = `${Math.min(100, (state.params.run / maxRun) * 100)}%`;
+  if (els.barLoft) els.barLoft.style.width = `${Math.min(100, (state.params.loft / maxLoft) * 100)}%`;
   if (els.barWind) els.barWind.style.width = `${Math.min(100, (state.params.wind / maxWind) * 100)}%`;
 
   els.valHighScore.textContent = state.highScore.toFixed(1);
@@ -230,8 +239,8 @@ export function initGame() {
     lblPower: document.getElementById('lbl-power'),
     barPower: document.getElementById('bar-power'),
     
-    lblRun: document.getElementById('lbl-run'),
-    barRun: document.getElementById('bar-run'),
+    lblLoft: document.getElementById('lbl-loft'),
+    barLoft: document.getElementById('bar-loft'),
     
     lblWind: document.getElementById('lbl-wind'),
     barWind: document.getElementById('bar-wind'),

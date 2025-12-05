@@ -33,19 +33,12 @@ export function updatePhysics(state, params) {
   if (y <= 0) {
     y = 0;
     
-    // Calculate Friction based on "Run" param
-    // Standard Friction is 0.8 (stops relatively fast)
-    // High Run param means reduced friction (glides more)
-    // params.run is approx 10 to 50
-    // If Run is 0, friction is 0.6. If Run is 50, friction is 0.85 (preserves velocity)
-    const runFactor = (params.run || 0) / 100; // 0.0 to 0.5
-    const effectiveFriction = 0.5 + runFactor; // 0.5 to 1.0 (clamped logic below)
-
+    // Fixed Friction logic (Run is now a hidden constant via FRICTION)
     // Check if vertical velocity is low enough to slide
     if (Math.abs(vy) < VELOCITY_STOP_THRESHOLD) {
       vy = 0;
       // Apply friction sliding
-      vx *= Math.min(0.98, effectiveFriction); // Cap at 0.98 to ensure it eventually stops
+      vx *= FRICTION; 
 
       // If sliding very slowly, stop
       if (Math.abs(vx) < 0.1) {
@@ -56,7 +49,7 @@ export function updatePhysics(state, params) {
       // Bounce
       vy = -vy * RESTITUTION;
       // Apply friction on impact
-      vx *= Math.min(0.98, effectiveFriction);
+      vx *= FRICTION;
       newBounces += 1;
     }
   }

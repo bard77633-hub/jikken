@@ -44,7 +44,7 @@ let currentQuestionIndex = 0;
 let score = 0;
 let bonuses = {
   power: 10,  // Base values
-  run: 10,    // Replaced bounce
+  loft: 20,   // Replaced run/bounce. This maps to approx 27 degrees initial angle.
   wind: 0
 };
 
@@ -66,7 +66,7 @@ function init() {
     scoreDisplay: document.getElementById('score-display'),
     btnStartGame: document.getElementById('btn-start-game'),
     bonusPower: document.getElementById('bonus-power'),
-    bonusRun: document.getElementById('bonus-run'),
+    bonusLoft: document.getElementById('bonus-loft'),
     bonusWind: document.getElementById('bonus-wind'),
   };
 
@@ -124,13 +124,13 @@ function handleAnswer(selectedIndex) {
     
     // Apply bonuses
     bonuses.power += distribution.power;
-    bonuses.run += distribution.run;
+    bonuses.loft += distribution.loft;
     bonuses.wind += distribution.wind;
     
     // Build feedback string
     let bonusStr = [];
     if (distribution.power > 0) bonusStr.push(`Power +${distribution.power}`);
-    if (distribution.run > 0) bonusStr.push(`Run +${distribution.run}`);
+    if (distribution.loft > 0) bonusStr.push(`Loft +${distribution.loft}`);
     if (distribution.wind > 0) bonusStr.push(`Wind +${distribution.wind}`);
     
     els.feedbackText.innerHTML = `
@@ -151,8 +151,8 @@ function handleAnswer(selectedIndex) {
 }
 
 function distributePoints(points) {
-  const stats = ['power', 'run', 'wind'];
-  let dist = { power: 0, run: 0, wind: 0 };
+  const stats = ['power', 'loft', 'wind'];
+  let dist = { power: 0, loft: 0, wind: 0 };
   
   for (let i = 0; i < points; i++) {
     const r = stats[Math.floor(Math.random() * stats.length)];
@@ -182,7 +182,7 @@ function showResults() {
   els.scoreDisplay.textContent = `${score} / ${questions.length}`;
   
   els.bonusPower.textContent = `Lv. ${bonuses.power}`;
-  els.bonusRun.textContent = `Lv. ${bonuses.run}`;
+  els.bonusLoft.textContent = `Lv. ${bonuses.loft}`;
   els.bonusWind.textContent = `Lv. ${bonuses.wind}`;
 }
 
@@ -190,7 +190,7 @@ function transitionToGame() {
   // Update Game Params with Quiz Results
   updateParams({
     power: bonuses.power,
-    run: bonuses.run,
+    loft: bonuses.loft,
     wind: bonuses.wind
   });
 
