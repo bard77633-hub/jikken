@@ -131,6 +131,15 @@ export function resetGame() {
   renderGame();
 }
 
+export function resetSessionBest() {
+  state.highScore = 0;
+  updateUI();
+}
+
+export function launchBall() {
+  handleLaunch();
+}
+
 function loop() {
   if (state.status !== 'FLYING') return;
   
@@ -194,6 +203,8 @@ function handleFinish(distance) {
     const stored = localStorage.getItem(key);
     let stats = stored ? JSON.parse(stored) : { maxCorrect: 0, maxDistance: 0 };
     
+    // Always update maxCorrect if current session is better or just to be safe (though quiz.js handles it mostly)
+    // But here we focus on Distance.
     if (distance > stats.maxDistance) {
       stats.maxDistance = distance;
       localStorage.setItem(key, JSON.stringify(stats));
