@@ -24,6 +24,9 @@ let requestID = null;
 let skipTimeoutID = null;
 let els = {}; 
 
+// Speed multiplier (steps per frame)
+const STEPS_PER_FRAME = 3;
+
 // --- Logic ---
 
 function setStatus(newStatus) {
@@ -114,7 +117,13 @@ function handleRestart() {
 
 function loop() {
   if (state.status !== 'FLYING') return;
-  state.physics = updatePhysics(state.physics, state.params);
+  
+  // Run physics multiple times per frame for speed
+  for (let i = 0; i < STEPS_PER_FRAME; i++) {
+    state.physics = updatePhysics(state.physics, state.params);
+    if (state.physics.isStopped) break;
+  }
+  
   renderGame();
   if (state.physics.isStopped) {
     handleFinish(state.physics.position.x);

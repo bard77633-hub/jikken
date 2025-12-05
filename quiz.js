@@ -6,57 +6,39 @@ const questions = [
     category: "地理",
     question: "日本で一番高い山はどれ？",
     options: ["北岳", "富士山", "奥穂高岳", "間ノ岳"],
-    answer: 1, 
-    stat: "power" 
+    answer: 1
   },
   {
     category: "科学",
     question: "元素記号「O」が表すものは？",
     options: ["金", "銀", "酸素", "鉄"],
-    answer: 2, 
-    stat: "wind" 
+    answer: 2
   },
   {
     category: "歴史",
     question: "1603年に徳川家康が開いた幕府は？",
     options: ["鎌倉幕府", "室町幕府", "江戸幕府", "明治政府"],
-    answer: 2, 
-    stat: "bounce" 
+    answer: 2
   },
   {
     category: "音楽",
     question: "一般的なピアノの鍵盤の数はいくつ？",
     options: ["66鍵", "76鍵", "88鍵", "96鍵"],
-    answer: 2, 
-    stat: "bounce" 
+    answer: 2
   },
   {
     category: "宇宙",
     question: "太陽系の中で最も大きな惑星は？",
     options: ["地球", "土星", "火星", "木星"],
-    answer: 3, 
-    stat: "power" 
+    answer: 3
   },
   {
     category: "文学",
     question: "『吾輩は猫である』の著者は？",
     options: ["夏目漱石", "太宰治", "芥川龍之介", "三島由紀夫"],
-    answer: 0, 
-    stat: "wind" 
+    answer: 0
   }
 ];
-
-const STAT_NAMES = {
-  power: "Power (飛距離)",
-  bounce: "Bounce (ラン)",
-  wind: "Wind (風読み)"
-};
-
-const STAT_INCREMENTS = {
-  power: 4,
-  bounce: 1,
-  wind: 4
-};
 
 let currentQuestionIndex = 0;
 let score = 0;
@@ -135,12 +117,26 @@ function handleAnswer(selectedIndex) {
     options[selectedIndex].classList.remove('opacity-60');
     score++;
     
-    // Level Up Feedback
-    const statName = STAT_NAMES[q.stat];
-    const increment = STAT_INCREMENTS[q.stat];
-    applyBonus(q.stat);
+    // Calculate Random Bonus Distribution
+    // Random total points between 4 and 8
+    const totalPoints = Math.floor(Math.random() * 5) + 4; 
+    const distribution = distributePoints(totalPoints);
     
-    els.feedbackText.innerHTML = `<span class="text-emerald-600 block text-xl mb-1">正解！ナイスアプローチ！</span><span class="text-amber-500 text-base font-bold">✨ ${statName} Lv.UP! (+${increment})</span>`;
+    // Apply bonuses
+    bonuses.power += distribution.power;
+    bonuses.bounce += distribution.bounce;
+    bonuses.wind += distribution.wind;
+    
+    // Build feedback string
+    let bonusStr = [];
+    if (distribution.power > 0) bonusStr.push(`Power +${distribution.power}`);
+    if (distribution.bounce > 0) bonusStr.push(`Bounce +${distribution.bounce}`);
+    if (distribution.wind > 0) bonusStr.push(`Wind +${distribution.wind}`);
+    
+    els.feedbackText.innerHTML = `
+      <span class="text-emerald-600 block text-xl mb-1">正解！ナイスアプローチ！</span>
+      <span class="text-amber-500 text-base font-bold">✨ Lv.UP! (${bonusStr.join(', ')})</span>
+    `;
     els.feedbackText.className = "mb-4";
   } else {
     options[selectedIndex].classList.add('wrong');
@@ -154,10 +150,15 @@ function handleAnswer(selectedIndex) {
   els.feedbackArea.classList.add('fade-in');
 }
 
-function applyBonus(statType) {
-  if (statType === 'power') bonuses.power += STAT_INCREMENTS.power;
-  if (statType === 'bounce') bonuses.bounce += STAT_INCREMENTS.bounce;
-  if (statType === 'wind') bonuses.wind += STAT_INCREMENTS.wind;
+function distributePoints(points) {
+  const stats = ['power', 'bounce', 'wind'];
+  let dist = { power: 0, bounce: 0, wind: 0 };
+  
+  for (let i = 0; i < points; i++) {
+    const r = stats[Math.floor(Math.random() * stats.length)];
+    dist[r]++;
+  }
+  return dist;
 }
 
 function nextQuestion() {
