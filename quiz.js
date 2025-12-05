@@ -1,4 +1,4 @@
-import { initGame, updateParams, setRestartCallback } from './app.js';
+import { initGame, updateParams, setRestartCallback, resetGame } from './app.js';
 
 // --- Helper Functions for generating math questions ---
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -720,6 +720,9 @@ function showResults() {
 }
 
 function transitionToGame() {
+  // CRITICAL: Reset game UI to ensure Launch button is enabled
+  resetGame();
+
   // Pass Genre ID to App for High Score saving later
   updateParams({
     power: bonuses.power,
