@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Throwing Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200">
+      <div class="max-w-5xl mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <header class="mb-8 text-center">
+          <h1 class="text-4xl font-extrabold text-slate-800 tracking-tight mb-2">
+            Throwing Game <span class="text-blue-500">2D</span>
+          </h1>
+          <p class="text-slate-500">Launch the ball and go for distance!</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          
+          <!-- Main Game Area -->
+          <div class="md:col-span-2 space-y-6">
+            <!-- Game Canvas Container -->
+            <div class="relative w-full h-64 md:h-96 bg-sky-200 overflow-hidden rounded-xl border-4 border-white shadow-inner">
+              <!-- Background decorations -->
+              <div class="absolute top-10 left-10 text-white/40 text-6xl select-none animate-pulse">☁️</div>
+              <div class="absolute top-20 right-20 text-white/40 text-5xl select-none">☁️</div>
+              
+              <svg 
+                id="game-svg"
+                class="w-full h-full"
+                viewBox="0 -35 80 40"
+                preserveAspectRatio="xMidYMax slice"
+                style="transform: scale(1, 1)"
+              >
+                <!-- Group for Dynamic Ground Markers -->
+                <g id="grp-markers"></g>
+
+                <!-- Trail -->
+                <polyline 
+                  id="elm-trail"
+                  points="" 
+                  fill="none" 
+                  stroke="rgba(255, 255, 255, 0.6)" 
+                  stroke-width="0.2" 
+                  stroke-dasharray="0.5"
+                />
+
+                <!-- The Object (Ball) -->
+                <circle 
+                  id="elm-ball"
+                  cx="0" 
+                  cy="0" 
+                  r="0.6" 
+                  fill="#ef4444" 
+                  stroke="white" 
+                  stroke-width="0.1" 
+                />
+              </svg>
+              
+              <!-- HUD Info -->
+              <div class="absolute top-4 right-4 bg-black/30 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-mono">
+                Height: <span id="val-height">0.0</span>m | Distance: <span id="val-distance">0.0</span>m
+              </div>
+            </div>
+            
+            <!-- Stats Display -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 text-center">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Current Distance</div>
+                <div class="text-3xl font-black text-slate-800">
+                   <span id="val-distance-big">0.0</span> <span class="text-lg font-medium text-slate-400">m</span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 text-center">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">High Score</div>
+                <div class="text-3xl font-black text-amber-500">
+                  <span id="val-highscore">0.0</span> <span class="text-lg font-medium text-slate-400">m</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status Message -->
+            <div id="msg-finished" class="hidden bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg text-center animate-bounce">
+              <strong>Finished!</strong> Total Distance: <span id="val-final-score">0.00</span>m
+            </div>
+          </div>
+
+          <!-- Sidebar Controls -->
+          <div class="md:col-span-1">
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 w-full max-w-md mx-auto md:mx-0 sticky top-4 z-10">
+              <h2 class="text-xl font-bold text-gray-800 mb-4">Control Panel</h2>
+              
+              <div class="space-y-6">
+                <!-- Power Slider -->
+                <div>
+                  <div class="flex justify-between mb-1">
+                    <label class="text-sm font-medium text-gray-600">Power (Strength)</label>
+                    <span id="lbl-power" class="text-sm font-bold text-blue-600">15</span>
+                  </div>
+                  <input
+                    id="inp-power"
+                    type="range"
+                    min="0"
+                    max="30"
+                    value="15"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                  />
+                </div>
+
+                <!-- Bounce Slider -->
+                <div>
+                  <div class="flex justify-between mb-1">
+                    <label class="text-sm font-medium text-gray-600">Bounce Limit</label>
+                    <span id="lbl-bounce" class="text-sm font-bold text-blue-600">5</span>
+                  </div>
+                  <input
+                    id="inp-bounce"
+                    type="range"
+                    min="0"
+                    max="30"
+                    value="5"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                  />
+                </div>
+
+                <!-- Wind Slider -->
+                <div>
+                  <div class="flex justify-between mb-1">
+                    <label class="text-sm font-medium text-gray-600">Wind (Tailwind)</label>
+                    <span id="lbl-wind" class="text-sm font-bold text-blue-600">5</span>
+                  </div>
+                  <input
+                    id="inp-wind"
+                    type="range"
+                    min="0"
+                    max="30"
+                    value="5"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                  />
+                </div>
+
+                <button
+                  id="btn-launch"
+                  class="w-full py-4 rounded-lg font-bold text-white text-lg transition-all transform active:scale-95 shadow-md bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/30"
+                >
+                  LAUNCH! 🚀
+                </button>
+              </div>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="mt-6 text-sm text-slate-500 bg-slate-100 p-4 rounded-lg">
+              <h3 class="font-bold text-slate-700 mb-2">How to Play</h3>
+              <ul class="list-disc list-inside space-y-1">
+                <li>Adjust <strong>Power</strong> to throw harder.</li>
+                <li>Increase <strong>Bounce Limit</strong> to keep moving after impact.</li>
+                <li>Use <strong>Wind</strong> to push the ball further (Tailwind).</li>
+                <li>Press Launch and watch it fly!</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
