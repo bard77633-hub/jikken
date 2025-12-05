@@ -331,7 +331,7 @@ const comprehensiveGenre = {
   id: 'comprehensive',
   title: '総合演習 (全範囲)',
   icon: '🎓',
-  description: '全ジャンルから出題。問題数40問。獲得ステータスは半分(切り上げ)。',
+  description: '全ジャンルから出題。問題数20問。獲得ステータスは半分(切り上げ)。',
   questions: [] // Populated dynamically
 };
 
@@ -343,6 +343,8 @@ let currentQuestionIndex = 0;
 let score = 0;
 let bonuses = { power: 10, loft: 20, wind: 0 };
 let isQuestionsExpanded = false;
+let wrongAnswers = [];
+let questionStartTime = 0;
 
 // --- DOM Elements ---
 let els = {};
@@ -490,7 +492,7 @@ function renderMenu() {
 
 function renderGenreCard(genre, isComprehensive = false) {
   const stats = getStats(genre.id);
-  const totalQ = isComprehensive ? 40 : genre.questions.length; // Approximate/Target for comprehensive
+  const totalQ = isComprehensive ? 20 : 10; // Session limit
   
   const card = document.createElement('div');
   const borderClass = isComprehensive ? 'border-amber-400 dark:border-amber-600' : 'border-slate-200 dark:border-slate-700';
@@ -529,6 +531,7 @@ function returnToMenu() {
 
 function startQuiz(genre) {
   currentGenre = genre;
+  wrongAnswers = [];
   
   if (genre.id === 'comprehensive') {
     // Collect questions from ALL genres
@@ -536,13 +539,13 @@ function startQuiz(genre) {
     genres.forEach(g => {
         allQuestions.push(...g.questions);
     });
-    // Shuffle and pick 40
+    // Shuffle and pick 20
     const shuffled = allQuestions.sort(() => 0.5 - Math.random());
-    currentQuestions = shuffled.slice(0, 40);
-  } else {
-    // Normal Genre: Shuffle and take up to 20
-    const shuffled = [...genre.questions].sort(() => 0.5 - Math.random());
     currentQuestions = shuffled.slice(0, 20);
+  } else {
+    // Normal Genre: Shuffle and take up to 10
+    const shuffled = [...genre.questions].sort(() => 0.5 - Math.random());
+    currentQuestions = shuffled.slice(0, 10);
   }
   
   currentQuestionIndex = 0;
@@ -561,11 +564,14 @@ function renderQuizStructure() {
   const headerGradient = isComp ? 'from-amber-500 to-orange-500' : 'from-emerald-600 to-teal-600 dark:from-emerald-700 dark:to-teal-700';
 
   els.quizContainer.innerHTML = `
-    <div class="max-w-2xl w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-600 overflow-hidden fade-in mx-4">
+    <div id="quiz-card" class="max-w-2xl w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-600 overflow-hidden fade-in mx-4 transition-colors duration-300">
       <div class="bg-gradient-to-r ${headerGradient} p-6 text-white text-center shadow-md relative">
         <button id="btn-quit-quiz" class="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white font-bold text-sm bg-black/20 px-3 py-1 rounded-full hover:bg-black/30 transition">✕ MENU</button>
         <h1 class="text-xl font-bold tracking-tight mb-1">${currentGenre.title}</h1>
-        <p class="text-white/80 text-xs font-medium uppercase tracking-widest">Question <span id="q-idx">1</span> / ${currentQuestions.length}</p>
+        <div class="flex justify-between items-center text-white/80 text-xs font-medium uppercase tracking-widest mt-2 px-8">
+            <span>Question <span id="q-idx">1</span> / ${currentQuestions.length}</span>
+            <span>Score <span id="val-quiz-score">0</span></span>
+        </div>
       </div>
       <div class="p-6 md:p-8">
         <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-8">
@@ -584,6 +590,8 @@ function renderQuizStructure() {
           <h2 class="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">Stage Clear!</h2>
           <p class="text-slate-500 dark:text-slate-400">Score: <span class="font-bold ${isComp ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'} text-2xl">${score}</span> / ${currentQuestions.length}</p>
           
+          <div id="review-list-container"></div>
+
           <div class="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-xl text-left text-sm text-slate-600 dark:text-slate-300 space-y-3 border border-slate-200 dark:border-slate-700 shadow-inner">
             <p class="font-bold text-center mb-4 text-base ${isComp ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'}">Item Get!</p>
             <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
@@ -613,6 +621,16 @@ function renderQuizStructure() {
 function renderQuestion() {
   const q = currentQuestions[currentQuestionIndex];
   
+  // Reset card styles
+  const card = document.getElementById('quiz-card');
+  if (card) {
+     card.classList.remove('bg-emerald-100', 'dark:bg-emerald-900', 'border-emerald-500', 'bg-rose-100', 'dark:bg-rose-900', 'border-rose-500');
+     card.classList.add('bg-white', 'dark:bg-slate-800', 'border-slate-200', 'dark:border-slate-600');
+  }
+
+  // Set start time for speed bonus
+  questionStartTime = Date.now();
+
   document.getElementById('q-idx').textContent = currentQuestionIndex + 1;
   document.getElementById('question-text').textContent = q.q;
   
@@ -642,14 +660,30 @@ function handleAnswer(selectedIndex) {
   }
 
   const feedbackText = document.getElementById('feedback-text');
+  const card = document.getElementById('quiz-card');
   
   if (isCorrect) {
+    // Change card background to green
+    card.classList.remove('bg-white', 'dark:bg-slate-800', 'border-slate-200', 'dark:border-slate-600');
+    card.classList.add('bg-emerald-100', 'dark:bg-emerald-900', 'border-emerald-500');
+
     options[selectedIndex].classList.add('correct');
     options[selectedIndex].classList.remove('opacity-60');
     score++;
     
+    // Update live score display
+    const scoreEl = document.getElementById('val-quiz-score');
+    if(scoreEl) scoreEl.textContent = score;
+
     // Bonus Logic
-    let totalPoints = Math.floor(Math.random() * 5) + 4; // 4 to 8
+    // Fixed base points (6) per correct answer
+    let totalPoints = 6;
+    
+    // Hidden Speed Bonus: +1 if answered within 5 seconds
+    const elapsedSeconds = (Date.now() - questionStartTime) / 1000;
+    if (elapsedSeconds <= 5) {
+      totalPoints += 1;
+    }
     
     // Comprehensive Mode Logic: Double questions but half stats
     if (currentGenre.id === 'comprehensive') {
@@ -669,10 +703,21 @@ function handleAnswer(selectedIndex) {
 
     feedbackText.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 block text-xl mb-1">Correct!</span><span class="text-amber-500 dark:text-amber-400 text-sm font-bold">✨ ${bStr.join(' ')}</span>`;
   } else {
+    // Change card background to red
+    card.classList.remove('bg-white', 'dark:bg-slate-800', 'border-slate-200', 'dark:border-slate-600');
+    card.classList.add('bg-rose-100', 'dark:bg-rose-900', 'border-rose-500');
+
     options[selectedIndex].classList.add('wrong');
     options[q.a].classList.add('correct');
     options[q.a].classList.remove('opacity-60');
     feedbackText.innerHTML = `<span class="text-rose-500 dark:text-rose-400 block text-xl">Incorrect...</span>`;
+    
+    // Record Wrong Answer
+    wrongAnswers.push({
+      q: q.q,
+      correct: q.options[q.a],
+      selected: q.options[selectedIndex]
+    });
   }
 
   const fbArea = document.getElementById('feedback-area');
@@ -710,6 +755,29 @@ function showResults() {
   document.getElementById('bonus-power').textContent = `Lv. ${bonuses.power}`;
   document.getElementById('bonus-loft').textContent = `Lv. ${bonuses.loft}`;
   document.getElementById('bonus-wind').textContent = `Lv. ${bonuses.wind}`;
+
+  // Render Review List
+  const container = document.getElementById('review-list-container');
+  if (wrongAnswers.length > 0) {
+      container.innerHTML = `
+        <div class="mt-6 bg-rose-50 dark:bg-rose-900/30 p-4 rounded-xl border border-rose-200 dark:border-rose-800 text-left">
+          <h3 class="font-bold text-rose-600 dark:text-rose-400 mb-3 text-sm uppercase flex items-center gap-2"><span>⚠️</span> Review Mistakes</h3>
+          <div class="space-y-3 max-h-40 overflow-y-auto pr-2 text-xs md:text-sm custom-scrollbar">
+            ${wrongAnswers.map(w => `
+              <div class="border-b border-rose-100 dark:border-rose-800 pb-2 last:border-0 last:pb-0">
+                <p class="font-bold text-slate-700 dark:text-slate-300 mb-1 leading-snug">${w.q}</p>
+                <div class="flex justify-between items-center">
+                   <span class="text-rose-500 line-through decoration-2 opacity-70 truncate max-w-[45%]">${w.selected}</span>
+                   <span class="text-emerald-600 dark:text-emerald-400 font-bold truncate max-w-[45%]">👉 ${w.correct}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+  } else {
+      container.innerHTML = '';
+  }
 
   // Save Quiz High Score (Correct count) immediately
   const stats = getStats(currentGenre.id);

@@ -36,15 +36,10 @@ export function updatePhysics(state, params) {
     
     // Check if vertical velocity is low enough to slide OR if max bounces reached
     if (bounces >= MAX_BOUNCES || Math.abs(vy) < VELOCITY_STOP_THRESHOLD) {
+      // Stop immediately to improve game tempo (skip sliding)
       vy = 0;
-      // Apply friction sliding
-      vx *= FRICTION; 
-
-      // If sliding very slowly, stop
-      if (Math.abs(vx) < 0.1) {
-        vx = 0;
-        isStopped = true;
-      }
+      vx = 0;
+      isStopped = true;
     } else {
       // Bounce
       vy = -vy * RESTITUTION;

@@ -1,4 +1,5 @@
 import { updatePhysics } from './physics.js';
+import { TIME_STEP } from './constants.js';
 
 // --- State ---
 const state = {
@@ -16,6 +17,7 @@ const state = {
     isStopped: true,
     history: [],
   },
+  particles: [],
   score: 0,
   highScore: 0, // Session best
 };
@@ -79,6 +81,7 @@ function handleLaunch() {
     isStopped: false,
     history: [{ x: startX, y: startY }],
   };
+  state.particles = [];
   
   setStatus('FLYING');
   state.score = 0;
@@ -122,6 +125,7 @@ export function resetGame() {
   state.physics.isStopped = true;
   state.physics.position = {x: 0.5, y: 0.15};
   state.physics.history = [];
+  state.particles = [];
   
   // Clear trail visually immediately
   renderGame();
@@ -130,16 +134,49 @@ export function resetGame() {
 function loop() {
   if (state.status !== 'FLYING') return;
   
+  const oldBounces = state.physics.bounces;
+
   for (let i = 0; i < STEPS_PER_FRAME; i++) {
     state.physics = updatePhysics(state.physics, state.params);
     if (state.physics.isStopped) break;
   }
   
+  // Detect bounce for particles (if bounce count increased)
+  if (state.physics.bounces > oldBounces) {
+     spawnParticles(state.physics.position.x, 0, 8); 
+  }
+  
+  updateParticles();
+
   renderGame();
   if (state.physics.isStopped) {
     handleFinish(state.physics.position.x);
   } else {
     requestID = requestAnimationFrame(loop);
+  }
+}
+
+function spawnParticles(x, y, count) {
+  for(let i=0; i<count; i++) {
+    state.particles.push({
+      x: x,
+      y: y + 0.1, // Lift slightly above ground
+      vx: (Math.random() - 0.5) * 15,
+      vy: Math.random() * 8 + 3,
+      life: 1.0,
+      color: Math.random() > 0.5 ? '#fbbf24' : '#fcd34d' // Amber dust
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.x += p.vx * TIME_STEP;
+    p.y += p.vy * TIME_STEP;
+    p.vy -= 9.8 * TIME_STEP; // Gravity
+    p.life -= 0.03;
+    if (p.life <= 0) state.particles.splice(i, 1);
   }
 }
 
@@ -211,8 +248,17 @@ function renderGame() {
     const points = history.map(p => `${p.x},${-p.y}`).join(' ');
     els.trail.setAttribute('points', points);
   }
-
+  
+  renderParticles(cameraX, viewWidth);
   renderMarkers(cameraX, viewWidth);
+}
+
+function renderParticles(cameraX, viewWidth) {
+  if (!els.grpParticles) return;
+  const html = state.particles.map(p => 
+    `<circle cx="${p.x}" cy="${-p.y}" r="${0.2 * p.life + 0.1}" fill="${p.color}" opacity="${p.life}" />`
+  ).join('');
+  els.grpParticles.innerHTML = html;
 }
 
 function renderMarkers(cameraX, viewWidth) {
@@ -258,6 +304,7 @@ export function initGame() {
     ball: document.getElementById('elm-ball'),
     trail: document.getElementById('elm-trail'),
     groundMarkers: document.getElementById('grp-markers'),
+    grpParticles: document.getElementById('grp-particles'),
     
     lblPower: document.getElementById('lbl-power'),
     barPower: document.getElementById('bar-power'),
