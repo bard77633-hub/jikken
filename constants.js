@@ -8,3 +8,4 @@ export const FRICTION = 0.53;
 export const WIND_FACTOR = 0.5; // Multiplier for wind force
 export const VELOCITY_STOP_THRESHOLD = 0.5; // Stop if velocity is low
 export const HEIGHT_STOP_THRESHOLD = 0.1; // Stop if near ground
+export const MAX_BOUNCES = 3; // Maximum allowed bounces before forced rolling

@@ -4,7 +4,8 @@ import {
   RESTITUTION, 
   FRICTION, 
   WIND_FACTOR, 
-  VELOCITY_STOP_THRESHOLD 
+  VELOCITY_STOP_THRESHOLD,
+  MAX_BOUNCES
 } from './constants.js';
 
 export function updatePhysics(state, params) {
@@ -33,9 +34,8 @@ export function updatePhysics(state, params) {
   if (y <= 0) {
     y = 0;
     
-    // Fixed Friction logic (Run is now a hidden constant via FRICTION)
-    // Check if vertical velocity is low enough to slide
-    if (Math.abs(vy) < VELOCITY_STOP_THRESHOLD) {
+    // Check if vertical velocity is low enough to slide OR if max bounces reached
+    if (bounces >= MAX_BOUNCES || Math.abs(vy) < VELOCITY_STOP_THRESHOLD) {
       vy = 0;
       // Apply friction sliding
       vx *= FRICTION; 

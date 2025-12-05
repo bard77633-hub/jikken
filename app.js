@@ -5,9 +5,10 @@ const state = {
   status: 'IDLE', // IDLE, FLYING, FINISHED
   params: {
     power: 15,
-    loft: 30, // Launch Angle in degrees (approx 15 to 75 range)
+    loft: 30, // Launch Angle in degrees
     wind: 5,
   },
+  genreId: null, // Current genre being played
   physics: {
     position: { x: 0, y: 0 },
     velocity: { x: 0, y: 0 },
@@ -16,14 +17,15 @@ const state = {
     history: [],
   },
   score: 0,
-  highScore: 0,
+  highScore: 0, // Session best
 };
 
 let requestID = null;
 let skipTimeoutID = null;
 let els = {}; 
+let onRestartCallback = null; // Callback to return to menu
 
-// Speed multiplier (steps per frame)
+// Speed multiplier
 const STEPS_PER_FRAME = 3;
 
 // --- Logic ---
@@ -33,29 +35,19 @@ function setStatus(newStatus) {
   
   const isFlying = newStatus === 'FLYING';
   const isFinished = newStatus === 'FINISHED';
-  const isIdle = newStatus === 'IDLE';
 
   if (!els.btnLaunch) return; 
 
-  // Handle SHOT Button State
   if (isFlying || isFinished) {
     els.btnLaunch.disabled = true;
     els.btnLaunch.classList.add('scale-90', 'opacity-50', 'grayscale', 'cursor-not-allowed');
-    els.btnLaunch.classList.remove('hover:from-emerald-600', 'hover:to-teal-700', 'active:scale-95');
-    
-    if (isFlying) {
-      els.btnLaunch.innerHTML = 'Flying... 🏌️‍♂️';
-    } else {
-      els.btnLaunch.innerHTML = 'Shot Complete';
-    }
+    els.btnLaunch.innerHTML = isFlying ? 'Flying... 🏌️‍♂️' : 'Shot Complete';
   } else {
     els.btnLaunch.disabled = false;
     els.btnLaunch.classList.remove('scale-90', 'opacity-50', 'grayscale', 'cursor-not-allowed');
-    els.btnLaunch.classList.add('hover:from-emerald-600', 'hover:to-teal-700', 'active:scale-95');
     els.btnLaunch.innerHTML = 'SHOT! 🏌️‍♂️';
   }
 
-  // Handle Overlays
   if (isFlying) {
     els.msgFinished.classList.add('hidden');
     els.btnSkip.classList.add('hidden'); 
@@ -71,9 +63,6 @@ function setStatus(newStatus) {
 
 function handleLaunch() {
   const vTotal = state.params.power * 1.5;
-  
-  // Calculate Launch Angle from Loft param
-  // Loft 0 -> 15 deg, Loft 90 -> 75 deg
   const deg = 15 + (state.params.loft * 0.6); 
   const rad = deg * (Math.PI / 180);
 
@@ -117,13 +106,23 @@ function handleSkip() {
 }
 
 function handleRestart() {
-  window.location.reload();
+  // If a callback is registered (e.g., returnToMenu), use it.
+  if (onRestartCallback) {
+    // Reset internal state for next time
+    state.status = 'IDLE';
+    state.physics.isStopped = true;
+    state.physics.position = {x: 0.5, y: 0.15};
+    state.physics.history = [];
+    renderGame();
+    onRestartCallback();
+  } else {
+    window.location.reload();
+  }
 }
 
 function loop() {
   if (state.status !== 'FLYING') return;
   
-  // Run physics multiple times per frame for speed
   for (let i = 0; i < STEPS_PER_FRAME; i++) {
     state.physics = updatePhysics(state.physics, state.params);
     if (state.physics.isStopped) break;
@@ -139,10 +138,24 @@ function loop() {
 
 function handleFinish(distance) {
   state.score = distance;
+  
+  // Update Session High Score
   if (distance > state.highScore) {
     state.highScore = distance;
-    localStorage.setItem('throwingGameHighScore', distance.toFixed(2));
   }
+
+  // Update Persistent Genre High Score
+  if (state.genreId) {
+    const key = `golf_stats_${state.genreId}`;
+    const stored = localStorage.getItem(key);
+    let stats = stored ? JSON.parse(stored) : { maxCorrect: 0, maxDistance: 0 };
+    
+    if (distance > stats.maxDistance) {
+      stats.maxDistance = distance;
+      localStorage.setItem(key, JSON.stringify(stats));
+    }
+  }
+
   updateUI();
   setStatus('FINISHED');
   cancelAnimationFrame(requestID);
@@ -154,15 +167,12 @@ function updateUI() {
   if (!els.lblPower) return;
   
   els.lblPower.textContent = state.params.power;
-  
-  // Calculate actual degree for display
   const displayDeg = Math.round(15 + (state.params.loft * 0.6));
   els.lblLoft.textContent = `${displayDeg}°`;
-  
   els.lblWind.textContent = state.params.wind;
   
   const maxPower = 40; 
-  const maxLoft = 100; // UI scale 0-100
+  const maxLoft = 100;
   const maxWind = 20;
 
   if (els.barPower) els.barPower.style.width = `${Math.min(100, (state.params.power / maxPower) * 100)}%`;
@@ -174,8 +184,7 @@ function updateUI() {
 
 function renderGame() {
   const { position, history } = state.physics;
-  const distStr = position.x.toFixed(1);
-  if (els.valDistance) els.valDistance.textContent = distStr;
+  if (els.valDistance) els.valDistance.textContent = position.x.toFixed(1);
   if (els.valHeight) els.valHeight.textContent = position.y.toFixed(1);
 
   const viewWidth = 80;
@@ -222,11 +231,18 @@ function renderMarkers(cameraX, viewWidth) {
 
 // --- Initialization ---
 
-export function updateParams(newParams) {
+export function updateParams(newParams, genreId = null) {
   if (newParams) {
     state.params = { ...state.params, ...newParams };
   }
+  if (genreId) {
+    state.genreId = genreId;
+  }
   updateUI();
+}
+
+export function setRestartCallback(callback) {
+  onRestartCallback = callback;
 }
 
 export function initGame() {
@@ -266,11 +282,7 @@ export function initGame() {
   if (els.btnSkip) els.btnSkip.addEventListener('click', handleSkip);
   if (els.btnRestart) els.btnRestart.addEventListener('click', handleRestart);
 
-  const saved = localStorage.getItem('throwingGameHighScore');
-  if (saved) {
-    state.highScore = parseFloat(saved);
-  }
-
+  state.highScore = 0;
   updateUI();
-  renderGame(); // Initial Render
+  renderGame();
 }
