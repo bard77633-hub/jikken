@@ -33,34 +33,35 @@ export function updatePhysics(state, params) {
   if (y <= 0) {
     y = 0;
     
-    // Check if we should stop
-    // Stop if we exceeded bounce limit OR if vertical energy is very low
-    if (newBounces >= params.bounceLimit || Math.abs(vy) < VELOCITY_STOP_THRESHOLD) {
-      if (Math.abs(vx) < VELOCITY_STOP_THRESHOLD) {
-        // Complete stop
+    // Calculate Friction based on "Run" param
+    // Standard Friction is 0.8 (stops relatively fast)
+    // High Run param means reduced friction (glides more)
+    // params.run is approx 10 to 50
+    // If Run is 0, friction is 0.6. If Run is 50, friction is 0.85 (preserves velocity)
+    const runFactor = (params.run || 0) / 100; // 0.0 to 0.5
+    const effectiveFriction = 0.5 + runFactor; // 0.5 to 1.0 (clamped logic below)
+
+    // Check if vertical velocity is low enough to slide
+    if (Math.abs(vy) < VELOCITY_STOP_THRESHOLD) {
+      vy = 0;
+      // Apply friction sliding
+      vx *= Math.min(0.98, effectiveFriction); // Cap at 0.98 to ensure it eventually stops
+
+      // If sliding very slowly, stop
+      if (Math.abs(vx) < 0.1) {
         vx = 0;
-        vy = 0;
         isStopped = true;
-      } else {
-        // Slide with friction
-        vy = 0;
-        vx *= FRICTION;
-        // If sliding very slowly, stop
-        if (Math.abs(vx) < 0.1) {
-          vx = 0;
-          isStopped = true;
-        }
       }
     } else {
       // Bounce
       vy = -vy * RESTITUTION;
-      vx *= FRICTION; // Friction applied on impact
+      // Apply friction on impact
+      vx *= Math.min(0.98, effectiveFriction);
       newBounces += 1;
     }
   }
 
   // Record history for trail
-  // Ensure we have a valid history array
   const safeHistory = history || [];
   const lastPos = safeHistory.length > 0 ? safeHistory[safeHistory.length - 1] : null;
   let newHistory = safeHistory;

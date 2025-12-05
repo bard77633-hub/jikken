@@ -6,7 +6,7 @@ const state = {
   status: 'IDLE', // IDLE, FLYING, FINISHED
   params: {
     power: 15,
-    bounceLimit: 5,
+    run: 10, // Replaces bounceLimit. Represents friction reduction.
     wind: 5,
   },
   physics: {
@@ -149,15 +149,15 @@ function updateUI() {
   if (!els.lblPower) return;
   
   els.lblPower.textContent = state.params.power;
-  els.lblBounce.textContent = state.params.bounceLimit;
+  els.lblRun.textContent = state.params.run;
   els.lblWind.textContent = state.params.wind;
   
   const maxPower = 40; 
-  const maxBounce = 15;
+  const maxRun = 50; // Increased scale for Run
   const maxWind = 20;
 
   if (els.barPower) els.barPower.style.width = `${Math.min(100, (state.params.power / maxPower) * 100)}%`;
-  if (els.barBounce) els.barBounce.style.width = `${Math.min(100, (state.params.bounceLimit / maxBounce) * 100)}%`;
+  if (els.barRun) els.barRun.style.width = `${Math.min(100, (state.params.run / maxRun) * 100)}%`;
   if (els.barWind) els.barWind.style.width = `${Math.min(100, (state.params.wind / maxWind) * 100)}%`;
 
   els.valHighScore.textContent = state.highScore.toFixed(1);
@@ -230,8 +230,8 @@ export function initGame() {
     lblPower: document.getElementById('lbl-power'),
     barPower: document.getElementById('bar-power'),
     
-    lblBounce: document.getElementById('lbl-bounce'),
-    barBounce: document.getElementById('bar-bounce'),
+    lblRun: document.getElementById('lbl-run'),
+    barRun: document.getElementById('bar-run'),
     
     lblWind: document.getElementById('lbl-wind'),
     barWind: document.getElementById('bar-wind'),
