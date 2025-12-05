@@ -41,11 +41,11 @@ function setStatus(newStatus) {
   if (isFlying || isFinished) {
     els.btnLaunch.disabled = true;
     els.btnLaunch.classList.add('scale-90', 'opacity-50', 'grayscale', 'cursor-not-allowed');
-    els.btnLaunch.innerHTML = isFlying ? 'Flying... 🏌️‍♂️' : 'Shot Complete';
+    els.btnLaunch.innerHTML = isFlying ? 'Launching... 🚀' : 'Finish';
   } else {
     els.btnLaunch.disabled = false;
     els.btnLaunch.classList.remove('scale-90', 'opacity-50', 'grayscale', 'cursor-not-allowed');
-    els.btnLaunch.innerHTML = 'SHOT! 🏌️‍♂️';
+    els.btnLaunch.innerHTML = 'THROW! 🚀';
   }
 
   if (isFlying) {
@@ -213,16 +213,16 @@ function renderMarkers(cameraX, viewWidth) {
   const start = Math.floor(cameraX / 10) * 10;
   const end = start + viewWidth + 10;
   let markersHtml = '';
-  markersHtml += `<rect x="${cameraX - 10}" y="0" width="${viewWidth + 20}" height="10" fill="#22c55e" />`;
-  markersHtml += `<line x1="${cameraX - 10}" y1="0" x2="${cameraX + viewWidth + 10}" y2="0" stroke="#15803d" stroke-width="0.2" />`;
+  markersHtml += `<rect x="${cameraX - 10}" y="0" width="${viewWidth + 20}" height="10" fill="#064e3b" />`;
+  markersHtml += `<line x1="${cameraX - 10}" y1="0" x2="${cameraX + viewWidth + 10}" y2="0" stroke="#047857" stroke-width="0.2" />`;
 
   for (let i = start; i <= end; i += 10) {
     if (i === 0) continue;
     markersHtml += `
       <g transform="translate(${i}, 0)">
-        <line x1="0" y1="0" x2="0" y2="-2" stroke="#fff" stroke-width="0.1" />
-        <rect x="-1" y="-3" width="2" height="1" fill="#fff" rx="0.2" />
-        <text x="0" y="-2.3" font-size="0.6" fill="#15803d" text-anchor="middle" font-weight="bold">${i}m</text>
+        <line x1="0" y1="0" x2="0" y2="-2" stroke="#475569" stroke-width="0.1" />
+        <rect x="-1" y="-3" width="2" height="1" fill="#475569" rx="0.2" />
+        <text x="0" y="-2.3" font-size="0.6" fill="#cbd5e1" text-anchor="middle" font-weight="bold">${i}m</text>
       </g>
     `;
   }
@@ -273,16 +273,17 @@ export function initGame() {
     valFinalScore: document.getElementById('val-final-score'),
   };
 
+  // Only error if we expect to be in game mode, but here we init elements anyway
   if (!els.btnLaunch || !els.svg) {
-    console.error("Critical DOM elements missing");
-    return;
+    // Console log but don't stop everything else, as Menu might be active
+    console.log("Game elements not fully ready, but initGame called.");
   }
 
-  els.btnLaunch.addEventListener('click', handleLaunch);
-  if (els.btnSkip) els.btnSkip.addEventListener('click', handleSkip);
-  if (els.btnRestart) els.btnRestart.addEventListener('click', handleRestart);
+  els.btnLaunch?.addEventListener('click', handleLaunch);
+  els.btnSkip?.addEventListener('click', handleSkip);
+  els.btnRestart?.addEventListener('click', handleRestart);
 
   state.highScore = 0;
   updateUI();
-  renderGame();
+  if(els.svg) renderGame();
 }
