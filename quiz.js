@@ -1,49 +1,78 @@
 import { startGame } from './app.js';
 
+// General Knowledge Questions (Japanese)
 const questions = [
   {
-    question: "Which angle typically provides the maximum range for a projectile (ignoring air resistance)?",
+    category: "地理",
+    question: "日本で一番高い山はどれ？",
     options: [
-      "30 Degrees",
-      "45 Degrees",
-      "60 Degrees",
-      "90 Degrees"
+      "北岳",
+      "富士山",
+      "奥穂高岳",
+      "間ノ岳"
     ],
-    answer: 1, // Index of correct answer
-    stat: "power" // Bonus stat type
+    answer: 1, // 富士山
+    stat: "power" // Height relates to Power
   },
   {
-    question: "When a ball hits the ground, what force helps it move forward despite friction?",
+    category: "科学",
+    question: "元素記号「O」が表すものは？",
     options: [
-      "Gravity",
-      "Restitution",
-      "Inertia (Momentum)",
-      "Magnetic Force"
+      "金",
+      "銀",
+      "酸素",
+      "鉄"
     ],
-    answer: 2,
-    stat: "bounce"
+    answer: 2, // 酸素
+    stat: "wind" // Air/Oxygen relates to Wind
   },
   {
-    question: "How does a 'Tailwind' affect a flying object?",
+    category: "歴史",
+    question: "1603年に徳川家康が開いた幕府は？",
     options: [
-      "Pushes it backward",
-      "Pushes it downward",
-      "Pushes it forward",
-      "No effect"
+      "鎌倉幕府",
+      "室町幕府",
+      "江戸幕府",
+      "明治政府"
     ],
-    answer: 2,
-    stat: "wind"
+    answer: 2, // 江戸幕府
+    stat: "bounce" // Stability relates to Bounce
   },
   {
-    question: "If gravity increases, what happens to the flight distance?",
+    category: "音楽",
+    question: "一般的なピアノの鍵盤の数はいくつ？",
     options: [
-      "It increases",
-      "It decreases",
-      "It stays the same",
-      "It becomes zero"
+      "66鍵",
+      "76鍵",
+      "88鍵",
+      "96鍵"
     ],
-    answer: 1,
-    stat: "power" // Understanding gravity helps power management
+    answer: 2, // 88鍵
+    stat: "bounce" // Rhythm relates to Bounce
+  },
+  {
+    category: "宇宙",
+    question: "太陽系の中で最も大きな惑星は？",
+    options: [
+      "地球",
+      "土星",
+      "火星",
+      "木星"
+    ],
+    answer: 3, // 木星
+    stat: "power" // Massive gravity relates to Power
+  },
+  {
+    category: "文学",
+    question: "『吾輩は猫である』の著者は？",
+    options: [
+      "夏目漱石",
+      "太宰治",
+      "芥川龍之介",
+      "三島由紀夫"
+    ],
+    answer: 0, // 夏目漱石
+    stat: "wind" // Whimsy relates to Wind
   }
 ];
 
@@ -55,82 +84,104 @@ let bonuses = {
   wind: 0
 };
 
-// DOM Elements
-const elQuizContainer = document.getElementById('quiz-container');
-const elGameContainer = document.getElementById('game-container');
-const elQuestionText = document.getElementById('question-text');
-const elOptionsGrid = document.getElementById('options-grid');
-const elFeedbackArea = document.getElementById('feedback-area');
-const elFeedbackText = document.getElementById('feedback-text');
-const elBtnNext = document.getElementById('btn-next-question');
-const elProgress = document.getElementById('quiz-progress');
-const elResultArea = document.getElementById('result-area');
-const elQuestionArea = document.getElementById('question-area');
-const elScoreDisplay = document.getElementById('score-display');
-const elBtnStartGame = document.getElementById('btn-start-game');
+// DOM Elements Container
+let els = {};
 
-// Bonus Display Elements
-const elBonusPower = document.getElementById('bonus-power');
-const elBonusBounce = document.getElementById('bonus-bounce');
-const elBonusWind = document.getElementById('bonus-wind');
+function init() {
+  // Grab elements safely
+  els = {
+    quizContainer: document.getElementById('quiz-container'),
+    gameContainer: document.getElementById('game-container'),
+    questionText: document.getElementById('question-text'),
+    optionsGrid: document.getElementById('options-grid'),
+    feedbackArea: document.getElementById('feedback-area'),
+    feedbackText: document.getElementById('feedback-text'),
+    btnNext: document.getElementById('btn-next-question'),
+    progress: document.getElementById('quiz-progress'),
+    resultArea: document.getElementById('result-area'),
+    questionArea: document.getElementById('question-area'),
+    scoreDisplay: document.getElementById('score-display'),
+    btnStartGame: document.getElementById('btn-start-game'),
+    bonusPower: document.getElementById('bonus-power'),
+    bonusBounce: document.getElementById('bonus-bounce'),
+    bonusWind: document.getElementById('bonus-wind'),
+  };
+
+  // Check if critical elements exist
+  if (!els.questionText) {
+    console.error("Quiz elements not found. Retrying...");
+    return;
+  }
+
+  // Attach Listeners
+  if (els.btnNext) els.btnNext.addEventListener('click', nextQuestion);
+  if (els.btnStartGame) els.btnStartGame.addEventListener('click', transitionToGame);
+
+  // Start Quiz
+  renderQuestion();
+}
 
 function renderQuestion() {
   const q = questions[currentQuestionIndex];
   
-  elQuestionText.textContent = q.question;
-  elOptionsGrid.innerHTML = '';
+  // Set Text
+  els.questionText.innerHTML = `<span class="block text-sm text-blue-500 font-bold mb-2 uppercase tracking-wide">${q.category}</span>${q.question}`;
+  els.optionsGrid.innerHTML = '';
   
   // Update Progress
   const pct = (currentQuestionIndex / questions.length) * 100;
-  elProgress.style.width = `${pct}%`;
+  els.progress.style.width = `${pct}%`;
 
   q.options.forEach((opt, idx) => {
     const btn = document.createElement('button');
-    btn.className = `quiz-option w-full p-4 text-left border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-blue-400 bg-white`;
+    btn.className = `quiz-option w-full p-4 text-left border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-blue-400 bg-white transition-all`;
     btn.textContent = opt;
     btn.onclick = () => handleAnswer(idx);
-    elOptionsGrid.appendChild(btn);
+    els.optionsGrid.appendChild(btn);
   });
 }
 
 function handleAnswer(selectedIndex) {
   const q = questions[currentQuestionIndex];
   const isCorrect = selectedIndex === q.answer;
-  const options = elOptionsGrid.children;
+  const options = els.optionsGrid.children;
 
   // Disable all buttons
   for (let btn of options) {
     btn.disabled = true;
-    btn.classList.add('cursor-not-allowed', 'opacity-80');
+    btn.classList.add('cursor-not-allowed', 'opacity-60');
   }
 
   // Highlight result
   if (isCorrect) {
     options[selectedIndex].classList.add('correct');
-    elFeedbackText.textContent = "Correct! Physics knowledge increasing...";
-    elFeedbackText.className = "text-lg font-bold mb-4 text-green-600";
+    options[selectedIndex].classList.remove('opacity-60');
+    els.feedbackText.textContent = "正解！ステータスボーナス獲得！";
+    els.feedbackText.className = "text-lg font-bold mb-4 text-green-600";
     score++;
     applyBonus(q.stat);
   } else {
     options[selectedIndex].classList.add('wrong');
     options[q.answer].classList.add('correct'); // Show right answer
-    elFeedbackText.textContent = "Incorrect. The correct answer is highlighted.";
-    elFeedbackText.className = "text-lg font-bold mb-4 text-red-500";
+    options[q.answer].classList.remove('opacity-60');
+    els.feedbackText.textContent = "不正解...";
+    els.feedbackText.className = "text-lg font-bold mb-4 text-red-500";
   }
 
-  elFeedbackArea.classList.remove('hidden');
-  elFeedbackArea.classList.add('fade-in');
+  els.feedbackArea.classList.remove('hidden');
+  els.feedbackArea.classList.add('fade-in');
 }
 
 function applyBonus(statType) {
-  if (statType === 'power') bonuses.power += 5;
-  if (statType === 'bounce') bonuses.bounce += 2;
-  if (statType === 'wind') bonuses.wind += 5;
+  // Bonus calculation logic
+  if (statType === 'power') bonuses.power += 4;
+  if (statType === 'bounce') bonuses.bounce += 1;
+  if (statType === 'wind') bonuses.wind += 4;
 }
 
 function nextQuestion() {
   currentQuestionIndex++;
-  elFeedbackArea.classList.add('hidden');
+  els.feedbackArea.classList.add('hidden');
   
   if (currentQuestionIndex < questions.length) {
     renderQuestion();
@@ -140,31 +191,29 @@ function nextQuestion() {
 }
 
 function showResults() {
-  elQuestionArea.classList.add('hidden');
-  elResultArea.classList.remove('hidden');
-  elResultArea.classList.add('fade-in');
+  els.questionArea.classList.add('hidden');
+  els.resultArea.classList.remove('hidden');
+  els.resultArea.classList.add('fade-in');
   
   // Final Progress
-  elProgress.style.width = '100%';
+  els.progress.style.width = '100%';
 
   // Text
-  elScoreDisplay.textContent = `${score} / ${questions.length}`;
+  els.scoreDisplay.textContent = `${score} / ${questions.length}`;
   
-  // Show Calculated Bonuses (Base + Earned)
-  // Base was Power 10, Bounce 2, Wind 0. 
-  // We show the resulting start values.
-  elBonusPower.textContent = `Start Level ${bonuses.power}`;
-  elBonusBounce.textContent = `Start Level ${bonuses.bounce}`;
-  elBonusWind.textContent = `Start Level ${bonuses.wind}`;
+  // Show Calculated Bonuses
+  els.bonusPower.textContent = `Lv. ${bonuses.power}`;
+  els.bonusBounce.textContent = `Lv. ${bonuses.bounce}`;
+  els.bonusWind.textContent = `Lv. ${bonuses.wind}`;
 }
 
 function transitionToGame() {
   // Hide Quiz
-  elQuizContainer.style.display = 'none';
+  els.quizContainer.style.display = 'none';
   
   // Show Game
-  elGameContainer.classList.remove('hidden');
-  elGameContainer.classList.add('fade-in');
+  els.gameContainer.classList.remove('hidden');
+  els.gameContainer.classList.add('fade-in');
 
   // Start Game Logic with calculated bonuses
   startGame({
@@ -174,9 +223,9 @@ function transitionToGame() {
   });
 }
 
-// Event Listeners
-elBtnNext.addEventListener('click', nextQuestion);
-elBtnStartGame.addEventListener('click', transitionToGame);
-
-// Init
-renderQuestion();
+// Initialization Logic to fix "Loading..."
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
