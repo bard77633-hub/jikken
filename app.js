@@ -109,10 +109,14 @@ function handleRestart() {
   // If a callback is registered (e.g., returnToMenu), use it.
   if (onRestartCallback) {
     // Reset internal state for next time
-    state.status = 'IDLE';
+    // CRITICAL FIX: Call setStatus to ensure button is re-enabled visually
+    setStatus('IDLE'); 
+    
     state.physics.isStopped = true;
     state.physics.position = {x: 0.5, y: 0.15};
     state.physics.history = [];
+    
+    // Clear trail visually immediately
     renderGame();
     onRestartCallback();
   } else {
