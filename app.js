@@ -21,7 +21,7 @@ const state = {
 };
 
 let requestID = null;
-let els = {}; // Will be populated in init()
+let els = {}; 
 
 // --- Logic ---
 
@@ -30,7 +30,7 @@ function setStatus(newStatus) {
   
   const isFlying = newStatus === 'FLYING';
   
-  if (!els.btnLaunch) return; // Safety check
+  if (!els.btnLaunch) return; 
 
   // Update controls state
   els.inpPower.disabled = isFlying;
@@ -109,6 +109,11 @@ function updateUI() {
   els.lblWind.textContent = state.params.wind;
   
   els.valHighScore.textContent = state.highScore.toFixed(1);
+
+  // Sync sliders if they exist (in case params changed programmatically)
+  els.inpPower.value = state.params.power;
+  els.inpBounce.value = state.params.bounceLimit;
+  els.inpWind.value = state.params.wind;
 }
 
 function renderGame() {
@@ -173,8 +178,14 @@ function renderMarkers(cameraX, viewWidth) {
 
 // --- Initialization ---
 
-function init() {
-  // Select DOM elements here to ensure they exist
+// Exported function to be called by quiz.js
+export function startGame(initialParams) {
+  // Apply initial parameters if provided
+  if (initialParams) {
+    state.params = { ...state.params, ...initialParams };
+  }
+
+  // Select DOM elements
   els = {
     svg: document.getElementById('game-svg'),
     ball: document.getElementById('elm-ball'),
@@ -192,8 +203,8 @@ function init() {
     
     btnLaunch: document.getElementById('btn-launch'),
     
-    valDistance: document.getElementById('val-distance'),     // HUD
-    valDistanceBig: document.getElementById('val-distance-big'), // Big Stats Box
+    valDistance: document.getElementById('val-distance'),     
+    valDistanceBig: document.getElementById('val-distance-big'), 
     valHeight: document.getElementById('val-height'),
     valHighScore: document.getElementById('val-highscore'),
     
@@ -201,7 +212,6 @@ function init() {
     valFinalScore: document.getElementById('val-final-score'),
   };
 
-  // Check critical elements
   if (!els.btnLaunch || !els.svg) {
     console.error("Critical DOM elements missing");
     return;
@@ -225,21 +235,12 @@ function init() {
 
   els.btnLaunch.addEventListener('click', handleLaunch);
 
-  // Load High Score
   const saved = localStorage.getItem('throwingGameHighScore');
   if (saved) {
     state.highScore = parseFloat(saved);
   }
 
-  // Initial Render
   updateUI();
   renderGame();
-  console.log("Game Initialized");
-}
-
-// Ensure DOM is loaded
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
+  console.log("Game Started with params:", state.params);
 }
