@@ -21,6 +21,7 @@ const state = {
 };
 
 let requestID = null;
+let skipTimeoutID = null;
 let els = {}; 
 
 // --- Logic ---
@@ -33,22 +34,21 @@ function setStatus(newStatus) {
   if (!els.btnLaunch) return; 
 
   // Update controls state
-  els.inpPower.disabled = isFlying;
-  els.inpBounce.disabled = isFlying;
-  els.inpWind.disabled = isFlying;
   els.btnLaunch.disabled = isFlying;
   
   if (isFlying) {
     els.btnLaunch.innerHTML = 'Flying... 🏌️‍♂️';
-    els.btnLaunch.classList.add('bg-slate-400', 'cursor-not-allowed');
-    els.btnLaunch.classList.remove('bg-gradient-to-r', 'from-emerald-500', 'to-teal-600', 'hover:from-emerald-600', 'hover:to-teal-700', 'shadow-emerald-500/30');
+    els.btnLaunch.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
     
     els.msgFinished.classList.add('hidden');
+    els.btnSkip.classList.add('hidden'); // Hide skip initially
   } else {
     els.btnLaunch.innerHTML = 'SHOT! 🏌️‍♂️';
-    els.btnLaunch.classList.remove('bg-slate-400', 'cursor-not-allowed');
-    els.btnLaunch.classList.add('bg-gradient-to-r', 'from-emerald-500', 'to-teal-600', 'hover:from-emerald-600', 'hover:to-teal-700', 'shadow-emerald-500/30');
+    els.btnLaunch.classList.remove('opacity-50', 'cursor-not-allowed', 'grayscale');
     
+    // Hide skip button when not flying
+    if (els.btnSkip) els.btnSkip.classList.add('hidden');
+
     if (newStatus === 'FINISHED') {
       els.msgFinished.classList.remove('hidden');
       els.valFinalScore.textContent = state.score.toFixed(2);
@@ -76,7 +76,37 @@ function handleLaunch() {
   setStatus('FLYING');
   state.score = 0;
   
+  // Schedule SKIP button appearance
+  if (skipTimeoutID) clearTimeout(skipTimeoutID);
+  skipTimeoutID = setTimeout(() => {
+    if (state.status === 'FLYING') {
+      els.btnSkip.classList.remove('hidden');
+    }
+  }, 1000);
+
   loop();
+}
+
+function handleSkip() {
+  if (state.status !== 'FLYING') return;
+  
+  // Cancel animation
+  cancelAnimationFrame(requestID);
+  
+  // Fast forward physics
+  let safetyCounter = 0;
+  while (!state.physics.isStopped && safetyCounter < 5000) {
+    state.physics = updatePhysics(state.physics, state.params);
+    safetyCounter++;
+  }
+  
+  // Render final state
+  renderGame();
+  handleFinish(state.physics.position.x);
+}
+
+function handleRestart() {
+  window.location.reload();
 }
 
 function loop() {
@@ -108,49 +138,42 @@ function handleFinish(distance) {
 
 function updateUI() {
   if (!els.lblPower) return;
+  
+  // Update Text
   els.lblPower.textContent = state.params.power;
   els.lblBounce.textContent = state.params.bounceLimit;
   els.lblWind.textContent = state.params.wind;
   
-  els.valHighScore.textContent = state.highScore.toFixed(1);
+  // Update Bars (Max power approx 30-40 for visuals)
+  const maxPower = 40; 
+  const maxBounce = 15;
+  const maxWind = 20;
 
-  // Sync sliders
-  els.inpPower.value = state.params.power;
-  els.inpBounce.value = state.params.bounceLimit;
-  els.inpWind.value = state.params.wind;
+  if (els.barPower) els.barPower.style.width = `${Math.min(100, (state.params.power / maxPower) * 100)}%`;
+  if (els.barBounce) els.barBounce.style.width = `${Math.min(100, (state.params.bounceLimit / maxBounce) * 100)}%`;
+  if (els.barWind) els.barWind.style.width = `${Math.min(100, (state.params.wind / maxWind) * 100)}%`;
+
+  els.valHighScore.textContent = state.highScore.toFixed(1);
 }
 
 function renderGame() {
   const { position, history } = state.physics;
   
-  // HUD and Stats
+  // HUD
   const distStr = position.x.toFixed(1);
   if (els.valDistance) els.valDistance.textContent = distStr;
-  
-  // Big Distance Display removed in index.html, using HUD only or update if exists
-  // if (els.valDistanceBig) els.valDistanceBig.textContent = distStr;
-  
   if (els.valHeight) els.valHeight.textContent = position.y.toFixed(1);
 
   // Camera Logic
   const viewWidth = 80;
   const viewHeight = 40;
-  // Camera follows ball but keeps golfer in view initially
   const cameraX = Math.max(0, position.x - viewWidth * 0.3);
   
-  // Update SVG ViewBox (Y is flipped in SVG logic within code? No, we transform points manually usually)
-  // But here we rely on the group transform or coordinate mapping.
-  // The SVG viewBox is set to `0 -35 80 40`. 
-  // Let's slide the x viewbox.
   if (els.svg) {
-    // y is usually negative for "up" in SVG from 0.
-    // Fixed height view: from -35 to +5 (ground at 0).
     els.svg.setAttribute('viewBox', `${cameraX} -35 ${viewWidth} ${viewHeight}`);
   }
 
   // Update Ball
-  // Note: physics y is positive up. SVG y is positive down.
-  // So we negate y.
   if (els.ball) {
     els.ball.setAttribute('cx', position.x);
     els.ball.setAttribute('cy', -position.y); // Flip Y
@@ -174,8 +197,8 @@ function renderMarkers(cameraX, viewWidth) {
   
   let markersHtml = '';
   // Ground Line (Green fairway)
-  markersHtml += `<rect x="${cameraX - 10}" y="0" width="${viewWidth + 20}" height="10" fill="#4ade80" />`;
-  markersHtml += `<line x1="${cameraX - 10}" y1="0" x2="${cameraX + viewWidth + 10}" y2="0" stroke="#22c55e" stroke-width="0.2" />`;
+  markersHtml += `<rect x="${cameraX - 10}" y="0" width="${viewWidth + 20}" height="10" fill="#22c55e" />`;
+  markersHtml += `<line x1="${cameraX - 10}" y1="0" x2="${cameraX + viewWidth + 10}" y2="0" stroke="#15803d" stroke-width="0.2" />`;
 
   // Distance Markers (Yardage signs)
   for (let i = start; i <= end; i += 10) {
@@ -208,15 +231,17 @@ export function startGame(initialParams) {
     groundMarkers: document.getElementById('grp-markers'),
     
     lblPower: document.getElementById('lbl-power'),
-    inpPower: document.getElementById('inp-power'),
+    barPower: document.getElementById('bar-power'),
     
     lblBounce: document.getElementById('lbl-bounce'),
-    inpBounce: document.getElementById('inp-bounce'),
+    barBounce: document.getElementById('bar-bounce'),
     
     lblWind: document.getElementById('lbl-wind'),
-    inpWind: document.getElementById('inp-wind'),
+    barWind: document.getElementById('bar-wind'),
     
     btnLaunch: document.getElementById('btn-launch'),
+    btnSkip: document.getElementById('btn-skip'),
+    btnRestart: document.getElementById('btn-restart'),
     
     valDistance: document.getElementById('val-distance'),     
     valHeight: document.getElementById('val-height'),
@@ -232,22 +257,9 @@ export function startGame(initialParams) {
   }
 
   // Attach Listeners
-  els.inpPower.addEventListener('input', (e) => {
-    state.params.power = Number(e.target.value);
-    updateUI();
-  });
-
-  els.inpBounce.addEventListener('input', (e) => {
-    state.params.bounceLimit = Number(e.target.value);
-    updateUI();
-  });
-
-  els.inpWind.addEventListener('input', (e) => {
-    state.params.wind = Number(e.target.value);
-    updateUI();
-  });
-
   els.btnLaunch.addEventListener('click', handleLaunch);
+  if (els.btnSkip) els.btnSkip.addEventListener('click', handleSkip);
+  if (els.btnRestart) els.btnRestart.addEventListener('click', handleRestart);
 
   const saved = localStorage.getItem('throwingGameHighScore');
   if (saved) {
