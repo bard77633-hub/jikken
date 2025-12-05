@@ -30,29 +30,43 @@ function setStatus(newStatus) {
   state.status = newStatus;
   
   const isFlying = newStatus === 'FLYING';
-  
+  const isFinished = newStatus === 'FINISHED';
+  const isIdle = newStatus === 'IDLE';
+
   if (!els.btnLaunch) return; 
 
-  // Update controls state
-  els.btnLaunch.disabled = isFlying;
-  
-  if (isFlying) {
-    els.btnLaunch.innerHTML = 'Flying... 🏌️‍♂️';
-    els.btnLaunch.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
+  // Handle SHOT Button State
+  if (isFlying || isFinished) {
+    // Disable and shrink button to show it's "done"
+    els.btnLaunch.disabled = true;
+    els.btnLaunch.classList.add('scale-90', 'opacity-50', 'grayscale', 'cursor-not-allowed');
+    els.btnLaunch.classList.remove('hover:from-emerald-600', 'hover:to-teal-700', 'active:scale-95');
     
-    els.msgFinished.classList.add('hidden');
-    els.btnSkip.classList.add('hidden'); // Hide skip initially
-  } else {
-    els.btnLaunch.innerHTML = 'SHOT! 🏌️‍♂️';
-    els.btnLaunch.classList.remove('opacity-50', 'cursor-not-allowed', 'grayscale');
-    
-    // Hide skip button when not flying
-    if (els.btnSkip) els.btnSkip.classList.add('hidden');
-
-    if (newStatus === 'FINISHED') {
-      els.msgFinished.classList.remove('hidden');
-      els.valFinalScore.textContent = state.score.toFixed(2);
+    if (isFlying) {
+      els.btnLaunch.innerHTML = 'Flying... 🏌️‍♂️';
+    } else {
+      els.btnLaunch.innerHTML = 'Shot Complete';
     }
+  } else {
+    // Reset for new game (though usually we reload)
+    els.btnLaunch.disabled = false;
+    els.btnLaunch.classList.remove('scale-90', 'opacity-50', 'grayscale', 'cursor-not-allowed');
+    els.btnLaunch.classList.add('hover:from-emerald-600', 'hover:to-teal-700', 'active:scale-95');
+    els.btnLaunch.innerHTML = 'SHOT! 🏌️‍♂️';
+  }
+
+  // Handle Overlays (Result & Skip)
+  if (isFlying) {
+    els.msgFinished.classList.add('hidden');
+    els.btnSkip.classList.add('hidden'); 
+  } else if (isFinished) {
+    els.msgFinished.classList.remove('hidden'); // Show centered result
+    els.btnSkip.classList.add('hidden');
+    els.valFinalScore.textContent = state.score.toFixed(2);
+  } else {
+    // IDLE
+    els.msgFinished.classList.add('hidden');
+    els.btnSkip.classList.add('hidden');
   }
 }
 
